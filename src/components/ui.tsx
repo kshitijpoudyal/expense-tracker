@@ -73,6 +73,10 @@ export function Row({
   );
 }
 
+export function EmptyRow({ children }: { children: string }) {
+  return <Text style={styles.empty}>{children}</Text>;
+}
+
 export function Amount({ children, tone }: { children: string; tone?: 'positive' | 'muted' }) {
   return (
     <Text style={[styles.amount, tone === 'positive' && { color: Colors.positive }, tone === 'muted' && { color: Colors.textSecondary }]}>
@@ -82,7 +86,7 @@ export function Amount({ children, tone }: { children: string; tone?: 'positive'
 }
 
 export function ProgressBar({ value, color = Colors.blue, height = 6 }: { value: number; color?: string; height?: number }) {
-  const pct = Math.max(0, Math.min(1, value)) * 100;
+  const pct = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0)) * 100;
   return (
     <View style={[styles.track, { height, borderRadius: height / 2 }]}>
       <View style={{ width: `${pct}%`, height, borderRadius: height / 2, backgroundColor: color }} />
@@ -100,9 +104,19 @@ export function TrendPill({ value, tone = 'positive' }: { value: string; tone?: 
   );
 }
 
-export function PrimaryButton({ label, onPress, style }: { label: string; onPress?: () => void; style?: StyleProp<ViewStyle> }) {
+export function PrimaryButton({
+  label,
+  onPress,
+  disabled,
+  style,
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.button, pressed && styles.pressed, style]}>
+    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.button, (pressed || disabled) && styles.pressed, style]}>
       <Text style={styles.buttonText}>{label}</Text>
     </Pressable>
   );
@@ -157,6 +171,7 @@ const styles = StyleSheet.create({
   rowText: { flex: 1 },
   rowTitle: { fontSize: 16, color: Colors.text, fontWeight: '500' },
   rowSubtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 3 },
+  empty: { fontSize: 14, color: Colors.textSecondary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xl },
   amount: { fontSize: 16, color: Colors.text, fontWeight: '600', fontVariant: ['tabular-nums'] },
   pressed: { opacity: 0.6 },
   track: { backgroundColor: Colors.track, overflow: 'hidden' },

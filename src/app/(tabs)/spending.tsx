@@ -3,48 +3,24 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 
 import { Donut } from '@/components/charts';
 import { Screen } from '@/components/screen';
-import { Amount, Card, Divider, IconBadge, Row, SectionLabel } from '@/components/ui';
+import { Amount, Card, Divider, EmptyRow, IconBadge, Row, SectionLabel } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import { history, spendByCategory } from '@/data/mock';
-import { addDays, addMonths, money, monthShort } from '@/lib/format';
-
-const PERIODS = ['Week', 'Month', 'Quarter', 'Year'] as const;
-type Period = (typeof PERIODS)[number];
-
-const SCALE: Record<Period, number> = { Week: 0.23, Month: 1, Quarter: 3, Year: 12 };
-
-function label(period: Period, stepsBack: number) {
-  const now = new Date();
-  if (period === 'Week') {
-    const d = addDays(now, -7 * stepsBack - now.getDay());
-    return `${monthShort(d)} ${d.getDate()}`;
-  }
-  if (period === 'Month') return monthShort(addMonths(now, -stepsBack));
-  if (period === 'Quarter') {
-    const d = addMonths(now, -3 * stepsBack);
-    return `Q${Math.floor(d.getMonth() / 3) + 1}`;
-  }
-  return String(now.getFullYear() - stepsBack);
-}
+import { PERIODS, useFinance, type Period } from '@/data/finance';
+import { money } from '@/lib/format';
 
 export default function Spending() {
+  const { periods } = useFinance();
   const [period, setPeriod] = useState<Period>('Month');
-  const [selected, setSelected] = useState(history.length - 1);
+  // Null selects the most recent bar, so switching period never leaves a stale index.
+  const [picked, setPicked] = useState<number | null>(null);
   const [includeBills, setIncludeBills] = useState(true);
 
-  const series = history.map((h, i) => ({
-    label: label(period, history.length - 1 - i),
-    income: h.income * SCALE[period],
-    spend: h.spend * SCALE[period],
-  }));
-  const peak = Math.max(...series.flatMap((s) => [s.income, s.spend]));
+  const series = periods[period];
+  const selected = picked !== null && picked < series.length ? picked : series.length - 1;
+  const peak = Math.max(1, ...series.flatMap((s) => [s.income, s.spend]));
   const current = series[selected];
 
-  // Earlier periods reuse the current category mix, scaled to that period's total.
-  const baseTotal = spendByCategory.reduce((t, c) => t + c.amount, 0);
-  const breakdown = spendByCategory
-    .filter((c) => includeBills || c.category.id !== 'bills')
-    .map((c) => ({ ...c, amount: (c.amount / baseTotal) * current.spend }));
+  const breakdown = current.byCategory.filter((c) => includeBills || c.category.id !== 'bills');
   const breakdownTotal = breakdown.reduce((t, c) => t + c.amount, 0);
   const net = current.income - current.spend;
 
@@ -56,14 +32,17 @@ export default function Spending() {
         <View>
           <View style={styles.periods}>
             {PERIODS.map((p) => (
-              <Pressable key={p} onPress={() => setPeriod(p)} style={[styles.period, p === period && styles.periodActive]}>
+              <Pressable key={p} onPress={() => {
+                  setPeriod(p);
+                  setPicked(null);
+                }} style={[styles.period, p === period && styles.periodActive]}>
                 <Text style={[styles.periodText, p === period && styles.periodTextActive]}>{p}</Text>
               </Pressable>
             ))}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bars}>
             {series.map((s, i) => (
-              <Pressable key={i} onPress={() => setSelected(i)} style={[styles.bar, i === selected && styles.barActive]}>
+              <Pressable key={i} onPress={() => setPicked(i)} style={[styles.bar, i === selected && styles.barActive]}>
                 <View style={styles.barPair}>
                   <View style={[styles.barIncome, { height: Math.max(6, (s.income / peak) * 54) }]} />
                   <View style={[styles.barSpend, { height: Math.max(6, (s.spend / peak) * 54) }]} />
@@ -108,13 +87,14 @@ export default function Spending() {
             <Text style={styles.donutValue}>{money(breakdownTotal, { cents: false })}</Text>
           </Donut>
         </View>
+        {breakdown.length === 0 ? <EmptyRow>No spending in this period.</EmptyRow> : null}
         {breakdown.map((c) => (
           <View key={c.category.id}>
             <Divider />
             <Row
               left={<IconBadge name={c.category.icon} bg={`${c.category.color}40`} />}
               title={c.category.name}
-              subtitle={`${Math.round((c.amount / breakdownTotal) * 100)}% of spend`}
+              subtitle={`${Math.round((c.amount / (breakdownTotal || 1)) * 100)}% of spend`}
               right={<Amount>{money(c.amount, { cents: false })}</Amount>}
             />
           </View>

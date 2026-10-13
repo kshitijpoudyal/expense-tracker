@@ -1,7 +1,8 @@
 import { RequestFlow } from '@/components/request-flow';
-import { recurring } from '@/data/mock';
+import { useFinance } from '@/data/finance';
 
 export default function LowerBills() {
+  const { recurring } = useFinance();
   return (
     <RequestFlow
       title="Lower your bills"

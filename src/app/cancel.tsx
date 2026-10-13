@@ -1,7 +1,8 @@
 import { RequestFlow } from '@/components/request-flow';
-import { recurring } from '@/data/mock';
+import { useFinance } from '@/data/finance';
 
 export default function Cancel() {
+  const { recurring } = useFinance();
   return (
     <RequestFlow
       title="Cancel subscriptions"

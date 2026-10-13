@@ -4,11 +4,22 @@ import { Gauge } from '@/components/charts';
 import { Screen } from '@/components/screen';
 import { Card, Divider, Row, SectionLabel, TrendPill } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
-import { creditScore } from '@/data/mock';
+import { useFinance } from '@/data/finance';
 
 const TONE: Record<string, string> = { Excellent: Colors.positive, Good: Colors.positive, Fair: Colors.warning };
 
 export default function CreditScore() {
+  const { creditScore } = useFinance();
+  if (!creditScore) {
+    return (
+      <Screen title="Credit score" back>
+        <Card style={styles.card}>
+          <Text style={styles.rating}>Not available</Text>
+          <Text style={styles.note}>Linked bank accounts do not include a credit score, so there is nothing to show here yet.</Text>
+        </Card>
+      </Screen>
+    );
+  }
   return (
     <Screen title="Credit score" back>
       <Card style={styles.card}>

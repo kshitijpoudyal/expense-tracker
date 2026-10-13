@@ -5,7 +5,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/screen';
 import { Card, Divider, IconBadge, Row, SectionLabel } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
-import { user, type IconName } from '@/data/mock';
+import { useFinance } from '@/data/finance';
+import type { IconName } from '@/data/mock';
 
 const TOOLS: { title: string; subtitle: string; icon: IconName; href: Href }[] = [
   { title: 'Budget', subtitle: 'Plan the month by category', icon: 'wallet-outline', href: '/budget' },
@@ -20,6 +21,7 @@ const SERVICES: typeof TOOLS = [
 
 export default function More() {
   const router = useRouter();
+  const { user } = useFinance();
   const chevron = <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />;
   const list = (items: typeof TOOLS) => (
     <Card>

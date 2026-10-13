@@ -6,12 +6,11 @@ import { LineChart } from '@/components/charts';
 import { Screen } from '@/components/screen';
 import { Amount, Card, Divider, IconBadge, Row, SectionLabel, Segmented, TrendPill } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
-import { accounts, netWorthHistory, totals, type Account, type IconName } from '@/data/mock';
+import { RANGES, useFinance, type Range } from '@/data/finance';
+import type { Account, IconName } from '@/data/mock';
 import { compactMoney, money } from '@/lib/format';
 
 const TABS = ['Summary', 'Assets', 'Debt'] as const;
-const RANGES = ['1M', '3M', '6M', '1Y', 'All'] as const;
-const POINTS: Record<(typeof RANGES)[number], number> = { '1M': 2, '3M': 4, '6M': 7, '1Y': 12, All: 12 };
 
 const KIND_ICON: Record<Account['kind'], IconName> = {
   checking: 'wallet-outline',
@@ -23,11 +22,13 @@ const KIND_ICON: Record<Account['kind'], IconName> = {
 
 export default function NetWorth() {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Summary');
-  const [range, setRange] = useState<(typeof RANGES)[number]>('6M');
-  const values = netWorthHistory.slice(-POINTS[range]);
-  const monthChange = netWorthHistory[netWorthHistory.length - 1] - netWorthHistory[netWorthHistory.length - 2];
+  const [range, setRange] = useState<Range>('6M');
+  const { accounts, netWorthMonthChange: monthChange, netWorthRange, status, totals } = useFinance();
+  // Asset and debt trends are only known for the sample data set.
+  const sample = status === 'sample';
+  const values = netWorthRange(range);
   const pct = (n: number) => `${Math.round(n)}%`;
-  const growth = ((values[values.length - 1] - values[0]) / values[0]) * 100;
+  const growth = values[0] ? ((values[values.length - 1] - values[0]) / Math.abs(values[0])) * 100 : 0;
 
   const assetAccounts = accounts.filter((a) => ['checking', 'savings', 'investment'].includes(a.kind));
   const debtAccounts = accounts.filter((a) => ['credit', 'loan'].includes(a.kind));
@@ -57,9 +58,9 @@ export default function NetWorth() {
 
           <SectionLabel>Summary</SectionLabel>
           <Card>
-            <Row left={<IconBadge name="cash-outline" />} title="Assets" right={<Trail pill={<TrendPill value="3%" />} value={compactMoney(totals.assets)} />} />
+            <Row left={<IconBadge name="cash-outline" />} title="Assets" right={<Trail pill={sample ? <TrendPill value="3%" /> : null} value={compactMoney(totals.assets)} />} />
             <Divider />
-            <Row left={<IconBadge name="card-outline" />} title="Debt" right={<Trail pill={<TrendPill value="2%" tone="warning" />} value={compactMoney(totals.debt)} />} />
+            <Row left={<IconBadge name="card-outline" />} title="Debt" right={<Trail pill={sample ? <TrendPill value="2%" tone="warning" /> : null} value={compactMoney(totals.debt)} />} />
             <Divider />
             <Row
               left={<IconBadge name="wallet-outline" />}

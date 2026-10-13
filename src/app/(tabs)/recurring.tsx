@@ -4,15 +4,17 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Amount, Avatar, Card, Row, SectionLabel } from '@/components/ui';
+import { Amount, Avatar, Card, EmptyRow, Row, SectionLabel } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import { recurring, type Recurring } from '@/data/mock';
+import { useFinance } from '@/data/finance';
+import type { Recurring } from '@/data/mock';
 import { addDays, dayNames, money, relativeDue } from '@/lib/format';
 
 const TABS = ['Upcoming', 'All'] as const;
 
 export default function RecurringScreen() {
   const router = useRouter();
+  const { recurring } = useFinance();
   const [tab, setTab] = useState<(typeof TABS)[number]>('Upcoming');
   const soon = recurring.filter((r) => r.dueIn <= 7);
   const later = recurring.filter((r) => r.dueIn > 7);
@@ -60,6 +62,13 @@ export default function RecurringScreen() {
 }
 
 function List({ items }: { items: Recurring[] }) {
+  if (items.length === 0) {
+    return (
+      <Card>
+        <EmptyRow>Nothing here yet.</EmptyRow>
+      </Card>
+    );
+  }
   return (
     <View style={{ gap: Spacing.sm + 2 }}>
       {items.map((r) => (

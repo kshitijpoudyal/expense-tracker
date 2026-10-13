@@ -3,32 +3,24 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LineChart } from '@/components/charts';
+import { LinkPrompt } from '@/components/link-prompt';
 import { Screen } from '@/components/screen';
-import { Amount, Avatar, Card, Divider, IconBadge, ProgressBar, Row, SectionLabel } from '@/components/ui';
+import { Amount, Avatar, Card, Divider, EmptyRow, IconBadge, ProgressBar, Row, SectionLabel } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import {
-  budgets,
-  categories,
-  creditScore,
-  currentSpend,
-  lastMonthCumulative,
-  recurring,
-  thisMonthCumulative,
-  totals,
-  transactions,
-  user,
-  type IconName,
-} from '@/data/mock';
+import { useFinance } from '@/data/finance';
+import { categories, type IconName } from '@/data/mock';
 import { compactMoney, dayHeading, money, relativeDue } from '@/lib/format';
 
 export default function Dashboard() {
   const router = useRouter();
+  const { budgets, creditScore, currentSpend, lastMonthCumulative, monthTransactions, recurring, thisMonthCumulative, totals, transactions, user } =
+    useFinance();
   const lastMonthSoFar = lastMonthCumulative[thisMonthCumulative.length - 1];
   const diff = currentSpend - lastMonthSoFar;
   const upcoming = recurring.filter((r) => r.dueIn <= 7);
   const budgetTotal = budgets.reduce((t, b) => t + b.limit, 0);
   const budgetSpent = budgets.reduce(
-    (t, b) => t + transactions.filter((x) => x.category === b.category).reduce((s, x) => s + x.amount, 0),
+    (t, b) => t + monthTransactions.filter((x) => x.category === b.category).reduce((s, x) => s + x.amount, 0),
     0,
   );
 
@@ -45,6 +37,7 @@ export default function Dashboard() {
       title="Dashboard"
       rightIcon="notifications-outline"
       header={<Text style={styles.greeting}>Good to see you, {user.firstName}</Text>}>
+      <LinkPrompt />
       <Card style={styles.pad}>
         <Text style={styles.caption}>Current spend this month</Text>
         <Text style={styles.hero}>{money(currentSpend, { cents: false })}</Text>
@@ -83,6 +76,7 @@ export default function Dashboard() {
         Upcoming charges
       </SectionLabel>
       <Card>
+        {upcoming.length === 0 ? <EmptyRow>Nothing due in the next 7 days.</EmptyRow> : null}
         {upcoming.map((r, i) => (
           <View key={r.id}>
             {i > 0 ? <Divider /> : null}
@@ -103,7 +97,7 @@ export default function Dashboard() {
         <Tile icon="stats-chart-outline" label="Net worth" value={compactMoney(totals.netWorth)} onPress={() => router.push('/net-worth')} />
       </View>
       <View style={styles.tiles}>
-        <Tile icon="speedometer-outline" label="Credit score" value={`${creditScore.score} · ${creditScore.rating}`} onPress={() => router.push('/credit-score')} />
+        <Tile icon="speedometer-outline" label="Credit score" value={creditScore ? `${creditScore.score} · ${creditScore.rating}` : 'Not available'} onPress={() => router.push('/credit-score')} />
         <Tile icon="cut-outline" label="Lower bills" value={`${recurring.filter((r) => r.negotiable).length} bills eligible`} onPress={() => router.push('/lower-bills')} />
       </View>
 
@@ -111,8 +105,9 @@ export default function Dashboard() {
         Recent transactions
       </SectionLabel>
       <Card>
+        {transactions.length === 0 ? <EmptyRow>No transactions yet.</EmptyRow> : null}
         {transactions.slice(0, 5).map((t, i) => {
-          const income = t.category === 'income';
+          const income = t.category === 'income' || t.amount < 0;
           return (
             <View key={t.id}>
               {i > 0 ? <Divider /> : null}
@@ -120,7 +115,7 @@ export default function Dashboard() {
                 left={<IconBadge name={categories[t.category].icon} bg={`${categories[t.category].color}33`} />}
                 title={t.merchant}
                 subtitle={`${dayHeading(t.daysAgo)}${t.pending ? ' · Pending' : ''}`}
-                right={<Amount tone={income ? 'positive' : undefined}>{`${income ? '+' : ''}${money(t.amount, { cents: true })}`}</Amount>}
+                right={<Amount tone={income ? 'positive' : undefined}>{`${income ? '+' : ''}${money(Math.abs(t.amount), { cents: true })}`}</Amount>}
               />
             </View>
           );

@@ -6,28 +6,25 @@ import { Donut } from '@/components/charts';
 import { Screen } from '@/components/screen';
 import { Card, ProgressBar, SectionLabel } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import { budgets, categories, currentIncome, recurring, transactions, type IconName } from '@/data/mock';
+import { useFinance } from '@/data/finance';
+import { categories, type IconName } from '@/data/mock';
 import { addMonths, money, monthLong } from '@/lib/format';
 
-const spentIn = (id: string) => transactions.filter((t) => t.category === id).reduce((t, x) => t + x.amount, 0);
-
 export default function Budget() {
+  const { budgets, currentIncome, expectedIncome, recurring, spentInMonth } = useFinance();
   const [monthOffset, setMonthOffset] = useState(0);
   const today = new Date();
   const month = addMonths(today, monthOffset);
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const daysLeft = Math.max(daysInMonth - today.getDate() + 1, 1);
 
-  // Past months are sample data too: the same budget, slightly varied spending.
-  const vary = 1 + monthOffset * 0.04;
-  const rows = budgets.map((b) => ({ ...b, spent: spentIn(b.category) * vary }));
+  const rows = budgets.map((b) => ({ ...b, spent: spentInMonth(b.category, monthOffset) }));
   const budgeted = rows.reduce((t, r) => t + r.limit, 0);
   const spent = rows.reduce((t, r) => t + r.spent, 0);
   const left = budgeted - spent;
 
   const billsTotal = recurring.filter((r) => r.kind === 'bill').reduce((t, r) => t + r.amount, 0);
-  const billsPaid = spentIn('bills');
-  const expectedIncome = 4800;
+  const billsPaid = spentInMonth('bills', 0);
 
   return (
     <Screen title="Budget" variant="plain" back rightIcon="ellipsis-horizontal">

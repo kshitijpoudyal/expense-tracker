@@ -1,6 +1,7 @@
 import type Ionicons from '@expo/vector-icons/Ionicons';
 
-// All data in this file is sample data. Nothing is fetched from a bank.
+// All data in this file is sample data. It is shown when the app runs without a backend configured;
+// signed-in users see their own bank data instead (see finance.tsx).
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -13,6 +14,8 @@ export type CategoryId =
   | 'entertainment'
   | 'health'
   | 'travel'
+  | 'other'
+  | 'transfer'
   | 'income';
 
 export type Category = { id: CategoryId; name: string; color: string; icon: IconName };
@@ -26,6 +29,8 @@ export const categories: Record<CategoryId, Category> = {
   entertainment: { id: 'entertainment', name: 'Entertainment', color: '#B49AE0', icon: 'film-outline' },
   health: { id: 'health', name: 'Health & Wellness', color: '#F29E7A', icon: 'fitness-outline' },
   travel: { id: 'travel', name: 'Travel', color: '#6C8CE8', icon: 'airplane-outline' },
+  other: { id: 'other', name: 'Everything else', color: '#A9ABB3', icon: 'ellipsis-horizontal-circle-outline' },
+  transfer: { id: 'transfer', name: 'Transfers', color: '#C8CAD0', icon: 'swap-horizontal-outline' },
   income: { id: 'income', name: 'Income', color: '#2E7D4F', icon: 'cash-outline' },
 };
 

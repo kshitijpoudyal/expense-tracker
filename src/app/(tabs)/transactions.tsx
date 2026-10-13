@@ -5,12 +5,14 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { Screen } from '@/components/screen';
 import { Amount, Card, Divider, IconBadge, Row, SectionLabel } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import { categories, transactions, type CategoryId } from '@/data/mock';
+import { useFinance } from '@/data/finance';
+import { categories, type CategoryId } from '@/data/mock';
 import { dayHeading, money } from '@/lib/format';
 
-const FILTERS: ('all' | CategoryId)[] = ['all', 'income', 'bills', 'groceries', 'dining', 'shopping', 'auto', 'entertainment', 'health', 'travel'];
+const FILTERS: ('all' | CategoryId)[] = ['all', 'income', 'bills', 'groceries', 'dining', 'shopping', 'auto', 'entertainment', 'health', 'travel', 'other', 'transfer'];
 
 export default function Transactions() {
+  const { transactions } = useFinance();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all');
 
@@ -53,7 +55,7 @@ export default function Transactions() {
             {visible
               .filter((t) => t.daysAgo === day)
               .map((t, i) => {
-                const income = t.category === 'income';
+                const income = t.category === 'income' || t.amount < 0;
                 return (
                   <View key={t.id}>
                     {i > 0 ? <Divider /> : null}
@@ -61,7 +63,7 @@ export default function Transactions() {
                       left={<IconBadge name={categories[t.category].icon} bg={`${categories[t.category].color}33`} />}
                       title={t.merchant}
                       subtitle={`${categories[t.category].name} · ${t.account}${t.pending ? ' · Pending' : ''}`}
-                      right={<Amount tone={income ? 'positive' : undefined}>{`${income ? '+' : ''}${money(t.amount, { cents: true })}`}</Amount>}
+                      right={<Amount tone={income ? 'positive' : undefined}>{`${income ? '+' : ''}${money(Math.abs(t.amount), { cents: true })}`}</Amount>}
                     />
                   </View>
                 );
