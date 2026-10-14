@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LineChart } from '@/components/charts';
@@ -8,12 +9,13 @@ import { Screen } from '@/components/screen';
 import { Amount, Avatar, Card, Divider, EmptyRow, IconBadge, ProgressBar, Row, SectionLabel } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useFinance } from '@/data/finance';
-import { categories, type IconName } from '@/data/mock';
+import { categories, type Account, type IconName } from '@/data/mock';
 import { compactMoney, dayHeading, money, relativeDue } from '@/lib/format';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { budgets, creditScore, currentSpend, lastMonthCumulative, monthTransactions, recurring, thisMonthCumulative, totals, transactions, user } =
+  const [expanded, setExpanded] = useState<string[]>([]);
+  const { accounts, budgets, creditScore, currentSpend, lastMonthCumulative, monthTransactions, recurring, thisMonthCumulative, totals, transactions, user } =
     useFinance();
   const lastMonthSoFar = lastMonthCumulative[thisMonthCumulative.length - 1];
   const diff = currentSpend - lastMonthSoFar;
@@ -24,13 +26,14 @@ export default function Dashboard() {
     0,
   );
 
-  const accountRows: { label: string; icon: IconName; value: number }[] = [
-    { label: 'Checking', icon: 'wallet-outline', value: totals.checking },
-    { label: 'Card balance', icon: 'card-outline', value: totals.credit },
-    { label: 'Net cash', icon: 'swap-vertical-outline', value: totals.checking - totals.credit },
-    { label: 'Savings', icon: 'cash-outline', value: totals.savings },
-    { label: 'Investments', icon: 'trending-up-outline', value: totals.investments },
+  const accountRows: { label: string; icon: IconName; value: number; kind?: Account['kind'] }[] = [
+    { label: 'Card balance', icon: 'card-outline', value: -totals.credit || 0, kind: 'credit' },
+    { label: 'Checking', icon: 'wallet-outline', value: totals.checking, kind: 'checking' },
+    { label: 'Savings', icon: 'cash-outline', value: totals.savings, kind: 'savings' },
+    { label: 'Investments', icon: 'trending-up-outline', value: totals.investments, kind: 'investment' },
+    { label: 'Net cash', icon: 'swap-vertical-outline', value: totals.checking + totals.savings + totals.investments - totals.credit },
   ];
+  const toggle = (label: string) => setExpanded((open) => (open.includes(label) ? open.filter((l) => l !== label) : [...open, label]));
 
   return (
     <Screen
@@ -64,12 +67,44 @@ export default function Dashboard() {
 
       <SectionLabel>Accounts</SectionLabel>
       <Card>
-        {accountRows.map((a, i) => (
-          <View key={a.label}>
-            {i > 0 ? <Divider /> : null}
-            <Row left={<IconBadge name={a.icon} />} title={a.label} right={<Amount>{money(a.value, { cents: false })}</Amount>} />
-          </View>
-        ))}
+        {accountRows.map((a, i) => {
+          const members = a.kind ? accounts.filter((x) => x.kind === a.kind) : [];
+          const expandable = members.length > 1;
+          const open = expandable && expanded.includes(a.label);
+          return (
+            <View key={a.label}>
+              {i > 0 ? <Divider /> : null}
+              <Row
+                left={<IconBadge name={a.icon} />}
+                title={a.label}
+                subtitle={expandable ? `${members.length} accounts` : undefined}
+                right={
+                  <View style={styles.accountRight}>
+                    <Amount>{money(a.value, { cents: false })}</Amount>
+                    {expandable ? <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textMuted} /> : null}
+                  </View>
+                }
+                onPress={expandable ? () => toggle(a.label) : undefined}
+              />
+              {open
+                ? members.map((m) => (
+                    <View key={m.id} style={styles.subAccount}>
+                      <View style={styles.subAccountText}>
+                        <Text style={styles.subAccountName} numberOfLines={1}>
+                          {m.name}
+                        </Text>
+                        <Text style={styles.subAccountMeta} numberOfLines={1}>
+                          {m.institution}
+                          {m.mask ? ` ·· ${m.mask}` : ''}
+                        </Text>
+                      </View>
+                      <Amount>{money(a.kind === 'credit' ? -m.balance || 0 : m.balance, { cents: false })}</Amount>
+                    </View>
+                  ))
+                : null}
+            </View>
+          );
+        })}
       </Card>
 
       <SectionLabel action="See all" onAction={() => router.push('/recurring')}>
@@ -168,6 +203,19 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 13, color: Colors.textSecondary },
+  accountRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  subAccount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    paddingRight: Spacing.lg,
+    paddingLeft: Spacing.lg * 2 + 44,
+    backgroundColor: Colors.background,
+  },
+  subAccountText: { flex: 1 },
+  subAccountName: { fontSize: 15, color: Colors.ink },
+  subAccountMeta: { fontSize: 13, color: Colors.textSecondary, marginTop: 1 },
   tiles: { flexDirection: 'row', gap: Spacing.md, marginHorizontal: Spacing.lg, marginTop: Spacing.md },
   tile: {
     flex: 1,
