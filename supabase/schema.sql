@@ -1,4 +1,4 @@
--- Kay Money schema. Run once in the Supabase SQL Editor.
+-- Kay Money schema. Run once in the Supabase SQL Editor, then every file in migrations/ in name order.
 --
 -- plaid_items holds bank access tokens and is readable only by the server (secret key).
 -- Every other table is read-only for the signed-in user and limited to their own rows.

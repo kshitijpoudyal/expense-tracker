@@ -18,6 +18,8 @@ export default endpoint(async ({ user, db, body }) => {
         access_token: data.access_token,
         institution_id: institution.id ?? null,
         institution_name: institution.name ?? null,
+        // Link registers the webhook on new items, so later syncs need not update it.
+        webhook: process.env.PLAID_WEBHOOK_URL || null,
       },
       { onConflict: 'item_id' },
     ),

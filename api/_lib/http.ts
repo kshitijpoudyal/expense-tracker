@@ -1,7 +1,12 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 
 // Vercel's Node.js request and response helpers, reduced to what these functions use.
-export type Req = { method?: string; headers: Record<string, string | string[] | undefined>; body?: unknown };
+export type Req = {
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+  query?: Record<string, string | string[] | undefined>;
+  body?: unknown;
+};
 export type Res = {
   status(code: number): Res;
   json(body: unknown): void;
@@ -20,7 +25,8 @@ export class HttpError extends Error {
 
 export type Context = { user: User; db: SupabaseClient; body: Record<string, unknown> };
 
-function admin() {
+/** A Supabase client with the secret key. It bypasses row-level security, so only the server uses it. */
+export function admin() {
   const url = process.env.SUPABASE_URL ?? process.env.EXPO_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SECRET_KEY;
   if (!url || !key) throw new HttpError(503, 'The server is missing its Supabase settings.');
