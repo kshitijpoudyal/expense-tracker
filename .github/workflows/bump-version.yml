@@ -1,0 +1,60 @@
+name: Bump version
+
+on:
+  push:
+    branches: [main]
+
+# One bump at a time, so two quick merges can't both write the same number.
+concurrency:
+  group: bump-version
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    # Skip the commit this workflow pushes itself.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Bump and commit
+        id: bump
+        run: |
+          version=$(node scripts/bump-version.js)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.json
+          git commit -m "Bump version to $version [skip ci]"
+          git push origin HEAD:main
+
+      # Sends the new code to installed apps over the air. Needs the EXPO_TOKEN repo secret.
+      - name: Check for EXPO_TOKEN
+        id: token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::warning::EXPO_TOKEN secret is not set, so no update was published."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.token.outputs.present == 'true'
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - if: steps.token.outputs.present == 'true'
+        run: npm ci
+      - name: Publish update
+        if: steps.token.outputs.present == 'true'
+        run: eas update --channel preview --environment preview --platform android --message "v${{ steps.bump.outputs.version }}" --non-interactive
