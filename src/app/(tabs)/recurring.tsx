@@ -1,5 +1,3 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -7,13 +5,12 @@ import { Screen } from '@/components/screen';
 import { Amount, Avatar, Card, EmptyRow, Row, SectionLabel } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useFinance } from '@/data/finance';
-import type { Recurring } from '@/data/mock';
+import type { Recurring } from '@/data/types';
 import { addDays, dayNames, money, relativeDue } from '@/lib/format';
 
 const TABS = ['Upcoming', 'All'] as const;
 
 export default function RecurringScreen() {
-  const router = useRouter();
   const { recurring } = useFinance();
   const [tab, setTab] = useState<(typeof TABS)[number]>('Upcoming');
   const soon = recurring.filter((r) => r.dueIn <= 7);
@@ -24,7 +21,7 @@ export default function RecurringScreen() {
   const monthly = (list: Recurring[]) => money(list.reduce((t, r) => t + r.amount, 0), { cents: false });
 
   return (
-    <Screen title="Recurring" rightIcon="add-circle-outline" tabs={TABS} activeTab={tab} onTab={setTab}>
+    <Screen title="Recurring" tabs={TABS} activeTab={tab} onTab={setTab}>
       {tab === 'Upcoming' ? (
         <>
           <Card style={styles.pad}>
@@ -47,13 +44,9 @@ export default function RecurringScreen() {
             <View style={styles.totalDivider} />
             <Total label="Bills" value={monthly(bills)} count={bills.length} />
           </Card>
-          <SectionLabel action="Cancel one" onAction={() => router.push('/cancel')}>
-            Subscriptions
-          </SectionLabel>
+          <SectionLabel>Subscriptions</SectionLabel>
           <List items={subscriptions} />
-          <SectionLabel action="Lower bills" onAction={() => router.push('/lower-bills')}>
-            Bills & utilities
-          </SectionLabel>
+          <SectionLabel>Bills & utilities</SectionLabel>
           <List items={bills} />
         </>
       )}
@@ -77,12 +70,7 @@ function List({ items }: { items: Recurring[] }) {
             left={<Avatar label={r.name} color={r.color} />}
             title={r.name}
             subtitle={relativeDue(r.dueIn)}
-            right={
-              <View style={styles.right}>
-                <Amount>{`${r.approximate ? '~' : ''}${money(r.amount)}`}</Amount>
-                <Ionicons name="ellipsis-vertical" size={18} color={Colors.ink} />
-              </View>
-            }
+            right={<Amount>{`${r.approximate ? '~' : ''}${money(r.amount)}`}</Amount>}
           />
         </Card>
       ))}
@@ -141,7 +129,6 @@ const styles = StyleSheet.create({
   heading: { fontSize: 26, fontWeight: '600', color: Colors.ink },
   summary: { fontSize: 16, lineHeight: 24, color: Colors.text, marginTop: Spacing.xs },
   bold: { fontWeight: '700' },
-  right: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   calendar: { borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.sm, paddingVertical: Spacing.md, marginTop: Spacing.lg },
   week: { flexDirection: 'row', paddingHorizontal: Spacing.xs },
   dayName: { flex: 1, textAlign: 'center', fontSize: 11, color: Colors.textSecondary, marginBottom: Spacing.xs },

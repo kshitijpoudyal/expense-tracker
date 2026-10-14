@@ -7,7 +7,7 @@ import { Screen } from '@/components/screen';
 import { Amount, Card, Divider, IconBadge, Row, SectionLabel, Segmented, TrendPill } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import { RANGES, useFinance, type Range } from '@/data/finance';
-import type { Account, IconName } from '@/data/mock';
+import type { Account, IconName } from '@/data/types';
 import { compactMoney, money } from '@/lib/format';
 
 const TABS = ['Summary', 'Assets', 'Debt'] as const;

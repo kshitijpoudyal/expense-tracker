@@ -27,11 +27,11 @@ function Navigator() {
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="budget" />
-        <Stack.Screen name="cancel" />
-        <Stack.Screen name="credit-score" />
-        <Stack.Screen name="lower-bills" />
+        <Stack.Screen name="category/[id]" />
         <Stack.Screen name="net-worth" />
+        <Stack.Screen name="rules" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="transaction/[id]" />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" />

@@ -7,6 +7,7 @@ import { Avatar, Card, Divider, EmptyRow, IconBadge, PrimaryButton, Row, Section
 import { Colors, Spacing } from '@/constants/theme';
 import { useFinance } from '@/data/finance';
 import { useAuth } from '@/lib/auth';
+import { timeAgo } from '@/lib/format';
 
 const ALERTS = ['Upcoming charges', 'Low balance', 'Large transactions', 'Price increases'] as const;
 
@@ -17,7 +18,7 @@ export default function Settings() {
     'Large transactions': false,
     'Price increases': true,
   });
-  const { accounts, busy, connectBank, error, institutions, refresh, removeInstitution, status, user } = useFinance();
+  const { accounts, busy, connectBank, error, institutions, lastSynced, reconnect, refresh, removeInstitution, status, user } = useFinance();
   const { signOut } = useAuth();
   // Removing an institution deletes its data, so it takes a second tap to confirm.
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -62,20 +63,31 @@ export default function Settings() {
               <View key={item.itemId}>
                 {i > 0 ? <Divider /> : null}
                 <Row
-                  left={<IconBadge name="business-outline" />}
+                  left={<IconBadge name={item.loginRequired ? 'alert-circle-outline' : 'business-outline'} color={item.loginRequired ? Colors.warning : Colors.ink} />}
                   title={item.name}
-                  subtitle={`${item.accounts} ${item.accounts === 1 ? 'account' : 'accounts'}`}
+                  subtitle={
+                    item.loginRequired
+                      ? 'Sign in again to keep syncing'
+                      : `${item.accounts} ${item.accounts === 1 ? 'account' : 'accounts'}`
+                  }
                   right={
-                    <Pressable
-                      hitSlop={8}
-                      disabled={busy}
-                      onPress={() => {
-                        if (confirming !== item.itemId) return setConfirming(item.itemId);
-                        setConfirming(null);
-                        removeInstitution(item.itemId);
-                      }}>
-                      <Text style={styles.remove}>{confirming === item.itemId ? 'Tap again to remove' : 'Remove'}</Text>
-                    </Pressable>
+                    <View style={styles.itemActions}>
+                      {item.loginRequired ? (
+                        <Pressable hitSlop={8} disabled={busy} onPress={() => reconnect(item.itemId)}>
+                          <Text style={styles.reconnect}>Reconnect</Text>
+                        </Pressable>
+                      ) : null}
+                      <Pressable
+                        hitSlop={8}
+                        disabled={busy}
+                        onPress={() => {
+                          if (confirming !== item.itemId) return setConfirming(item.itemId);
+                          setConfirming(null);
+                          removeInstitution(item.itemId);
+                        }}>
+                        <Text style={styles.remove}>{confirming === item.itemId ? 'Tap again to remove' : 'Remove'}</Text>
+                      </Pressable>
+                    </View>
                   }
                 />
               </View>
@@ -85,6 +97,7 @@ export default function Settings() {
           {institutions.length > 0 ? (
             <PrimaryButton label={busy ? 'Refreshing…' : 'Refresh balances and transactions'} onPress={refresh} disabled={busy} style={styles.action} />
           ) : null}
+          {lastSynced && institutions.length > 0 ? <Text style={styles.synced}>Last synced {timeAgo(lastSynced)}</Text> : null}
         </>
       )}
 
@@ -122,6 +135,9 @@ const styles = StyleSheet.create({
   name: { fontSize: 19, fontWeight: '600', color: Colors.ink },
   email: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   remove: { fontSize: 14, fontWeight: '600', color: Colors.accent },
+  reconnect: { fontSize: 14, fontWeight: '600', color: Colors.ink, textDecorationLine: 'underline' },
+  itemActions: { alignItems: 'flex-end', gap: Spacing.sm },
+  synced: { textAlign: 'center', fontSize: 13, color: Colors.textSecondary, marginTop: Spacing.md },
   error: { fontSize: 14, color: Colors.accent, marginHorizontal: Spacing.xl + 4, marginTop: Spacing.md },
   action: { marginHorizontal: Spacing.lg, marginTop: Spacing.lg },
   signOut: { alignItems: 'center', paddingVertical: Spacing.lg, marginTop: Spacing.xl },

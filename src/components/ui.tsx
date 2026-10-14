@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import type { IconName } from '@/data/mock';
+import type { IconName } from '@/data/types';
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[styles.card, style]}>{children}</View>;
@@ -48,12 +48,14 @@ export function Row({
   subtitle,
   right,
   onPress,
+  subtitleLines = 1,
 }: {
   left?: ReactNode;
   title: string;
   subtitle?: string;
   right?: ReactNode;
   onPress?: () => void;
+  subtitleLines?: number;
 }) {
   return (
     <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -63,7 +65,7 @@ export function Row({
           {title}
         </Text>
         {subtitle ? (
-          <Text style={styles.rowSubtitle} numberOfLines={1}>
+          <Text style={styles.rowSubtitle} numberOfLines={subtitleLines}>
             {subtitle}
           </Text>
         ) : null}

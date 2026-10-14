@@ -66,3 +66,30 @@ export function dayHeading(daysAgo: number, today = new Date()) {
 export function longDate(d: Date) {
   return `${monthLong(d)} ${d.getDate()}`;
 }
+
+/** A local calendar date as YYYY-MM-DD. */
+export function isoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Parses YYYY-MM-DD as a local date, not UTC midnight. */
+export function parseDate(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** "October 13", with the year added when it is not this year. */
+export function fullDate(iso: string, today = new Date()) {
+  const d = parseDate(iso);
+  return d.getFullYear() === today.getFullYear() ? longDate(d) : `${longDate(d)}, ${d.getFullYear()}`;
+}
+
+export function timeAgo(iso: string, now = new Date()) {
+  const minutes = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000));
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.round(hours / 24);
+  return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+}

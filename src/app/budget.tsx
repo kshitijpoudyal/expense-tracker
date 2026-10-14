@@ -1,18 +1,21 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Donut } from '@/components/charts';
 import { Screen } from '@/components/screen';
-import { Card, ProgressBar, SectionLabel } from '@/components/ui';
+import { Sheet } from '@/components/sheet';
+import { Card, EmptyRow, PrimaryButton, ProgressBar, SectionLabel } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useFinance } from '@/data/finance';
-import { categories, type IconName } from '@/data/mock';
+import { categories, categoryIds, isSpending, type CategoryId, type IconName } from '@/data/types';
 import { addMonths, money, monthLong } from '@/lib/format';
 
 export default function Budget() {
-  const { budgets, currentIncome, expectedIncome, recurring, spentInMonth } = useFinance();
+  const { budgets, currentIncome, expectedIncome, recurring, setBudget, spentInMonth } = useFinance();
   const [monthOffset, setMonthOffset] = useState(0);
+  // The category being added or edited; `new` while choosing which category to add.
+  const [editing, setEditing] = useState<CategoryId | 'new' | null>(null);
   const today = new Date();
   const month = addMonths(today, monthOffset);
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
@@ -87,34 +90,95 @@ export default function Budget() {
         />
       </View>
 
-      <SectionLabel action="Add Budget">Category budgets</SectionLabel>
+      <SectionLabel action="Add Budget" onAction={() => setEditing('new')}>
+        Category budgets
+      </SectionLabel>
       <View style={{ gap: Spacing.sm + 2 }}>
+        {rows.length === 0 ? (
+          <Card>
+            <EmptyRow>No budgets yet. Choose Add Budget to set a monthly limit for a category.</EmptyRow>
+          </Card>
+        ) : null}
         {rows.map((r) => {
           const c = categories[r.category];
           const remaining = r.limit - r.spent;
           return (
-            <Card key={r.category} style={styles.category}>
-              <Donut
-                size={52}
-                stroke={5}
-                data={[
-                  { value: Math.min(r.spent, r.limit), color: remaining >= 0 ? c.color : Colors.accent },
-                  { value: Math.max(remaining, 0.001), color: Colors.track },
-                ]}>
-                <Ionicons name={c.icon} size={20} color={Colors.ink} />
-              </Donut>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.categoryName}>{c.name}</Text>
-                <Text style={[styles.small, remaining < 0 && { color: Colors.accent }]}>
-                  {remaining >= 0 ? `${money(remaining, { cents: false })} left to spend` : `${money(-remaining, { cents: false })} over`}
-                </Text>
-              </View>
-              <Text style={styles.categoryLimit}>{money(r.limit, { cents: false })}</Text>
-            </Card>
+            <Pressable key={r.category} onPress={() => setEditing(r.category)} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+              <Card style={styles.category}>
+                <Donut
+                  size={52}
+                  stroke={5}
+                  data={[
+                    { value: Math.min(r.spent, r.limit), color: remaining >= 0 ? c.color : Colors.accent },
+                    { value: Math.max(remaining, 0.001), color: Colors.track },
+                  ]}>
+                  <Ionicons name={c.icon} size={20} color={Colors.ink} />
+                </Donut>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.categoryName}>{c.name}</Text>
+                  <Text style={[styles.small, remaining < 0 && { color: Colors.accent }]}>
+                    {remaining >= 0 ? `${money(remaining, { cents: false })} left to spend` : `${money(-remaining, { cents: false })} over`}
+                  </Text>
+                </View>
+                <Text style={styles.categoryLimit}>{money(r.limit, { cents: false })}</Text>
+              </Card>
+            </Pressable>
           );
         })}
       </View>
+
+      <Sheet visible={editing !== null} title={editing === 'new' ? 'Add Budget' : editing ? `${categories[editing].name} budget` : ''} onClose={() => setEditing(null)}>
+        {editing === 'new' ? (
+          <View>
+            {categoryIds
+              .filter((c) => isSpending(c) && !budgets.some((b) => b.category === c))
+              .map((c) => (
+                <Pressable key={c} onPress={() => setEditing(c)} style={styles.pick}>
+                  <Ionicons name={categories[c].icon} size={22} color={Colors.ink} />
+                  <Text style={styles.pickText}>{categories[c].name}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+                </Pressable>
+              ))}
+          </View>
+        ) : editing ? (
+          <LimitForm
+            initial={budgets.find((b) => b.category === editing)?.limit ?? null}
+            spentLastMonth={spentInMonth(editing, -1)}
+            onSave={(limit) => {
+              setBudget(editing, limit);
+              setEditing(null);
+            }}
+          />
+        ) : null}
+      </Sheet>
     </Screen>
+  );
+}
+
+/** Sets a monthly limit. Saving with an existing limit offers removal too. */
+function LimitForm({ initial, spentLastMonth, onSave }: { initial: number | null; spentLastMonth: number; onSave: (limit: number | null) => void }) {
+  const [text, setText] = useState(initial ? String(initial) : '');
+  const limit = Number(text.replace(/[^0-9.]/g, ''));
+  return (
+    <View>
+      <Text style={styles.small}>Monthly limit</Text>
+      <TextInput
+        value={text}
+        onChangeText={setText}
+        keyboardType="decimal-pad"
+        autoFocus
+        placeholder={spentLastMonth > 0 ? String(Math.ceil(spentLastMonth / 10) * 10) : '200'}
+        placeholderTextColor={Colors.textMuted}
+        style={styles.input}
+      />
+      {spentLastMonth > 0 ? <Text style={[styles.small, { marginTop: Spacing.sm }]}>You spent {money(spentLastMonth, { cents: false })} on this last month.</Text> : null}
+      <PrimaryButton label="Save" disabled={!(limit > 0)} onPress={() => onSave(limit)} style={{ marginTop: Spacing.lg }} />
+      {initial ? (
+        <Pressable onPress={() => onSave(null)} style={styles.removeBudget} hitSlop={8}>
+          <Text style={styles.removeText}>Remove budget</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -184,4 +248,19 @@ const styles = StyleSheet.create({
   category: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg, padding: Spacing.lg },
   categoryName: { fontSize: 16, fontWeight: '500', color: Colors.text, marginBottom: 3 },
   categoryLimit: { fontSize: 17, fontWeight: '600', color: Colors.ink },
+  pick: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: 13 },
+  pickText: { flex: 1, fontSize: 16, color: Colors.text },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    fontSize: 18,
+    color: Colors.text,
+    backgroundColor: Colors.background,
+    marginTop: Spacing.sm,
+  },
+  removeBudget: { alignItems: 'center', marginTop: Spacing.lg },
+  removeText: { fontSize: 15, color: Colors.accent, fontWeight: '600' },
 });

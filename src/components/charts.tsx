@@ -122,31 +122,6 @@ export function LineChart({
   );
 }
 
-/** Half-circle gauge, used for the credit score. */
-export function Gauge({ value, min, max, size = 240, children }: { value: number; min: number; max: number; size?: number; children?: ReactNode }) {
-  const stroke = 16;
-  const r = (size - stroke) / 2;
-  const half = Math.PI * r;
-  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
-  const arc = `M${stroke / 2},${size / 2} A${r},${r} 0 0 1 ${size - stroke / 2},${size / 2}`;
-  return (
-    <View style={{ width: size, height: size / 2 + stroke, alignItems: 'center', justifyContent: 'flex-end' }}>
-      <Svg width={size} height={size / 2 + stroke} style={StyleSheet.absoluteFill}>
-        <Path d={arc} stroke={Colors.track} strokeWidth={stroke} fill="none" strokeLinecap="round" />
-        <Path
-          d={arc}
-          stroke={Colors.positive}
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={`${half * pct} ${half}`}
-        />
-      </Svg>
-      {children}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   chartRow: { flexDirection: 'row', alignItems: 'flex-start' },
   axis: { width: 44 },

@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router/js-tabs';
 
 import { Colors } from '@/constants/theme';
-import type { IconName } from '@/data/mock';
+import type { IconName } from '@/data/types';
 
 const tabs: { name: string; title: string; icon: IconName; iconActive: IconName }[] = [
   { name: 'index', title: 'Dashboard', icon: 'home-outline', iconActive: 'home' },

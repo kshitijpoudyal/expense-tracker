@@ -7,7 +7,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, Spacing } from '@/constants/theme';
-import type { IconName } from '@/data/mock';
+import type { IconName } from '@/data/types';
 
 type Props<T extends string> = {
   title: string;
@@ -51,6 +51,8 @@ export function Screen<T extends string>({
         <Pressable
           hitSlop={12}
           style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel={back ? 'Back' : 'Settings'}
           onPress={() => (back ? router.back() : router.push('/settings'))}>
           <Ionicons name={back ? 'arrow-back' : 'settings-outline'} size={24} color={fg} />
         </Pressable>
