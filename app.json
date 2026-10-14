@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kay Money",
     "slug": "kay-money",
-    "version": "0.0.001",
+    "version": "0.0.002",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "kaymoney",
