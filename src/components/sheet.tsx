@@ -1,19 +1,42 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { PrimaryButton } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 
-/** A panel that slides up from the bottom of the screen. Tapping outside it closes it. */
+/**
+ * A panel that slides up from the bottom of the screen. Tapping outside it closes it.
+ * Only the panel slides; the dimmed backdrop appears and disappears instantly.
+ */
 export function Sheet({ visible, title, onClose, children }: { visible: boolean; title: string; onClose: () => void; children: ReactNode }) {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  // Stays true while the panel slides out, so the modal isn't torn down mid-animation.
+  const [mounted, setMounted] = useState(visible);
+  const offset = useSharedValue(height);
+  if (visible && !mounted) setMounted(true);
+
+  useEffect(() => {
+    if (visible) {
+      offset.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
+    } else {
+      offset.value = withTiming(height, { duration: 250, easing: Easing.in(Easing.cubic) }, (finished) => {
+        if (finished) scheduleOnRN(setMounted, false);
+      });
+    }
+  }, [visible, height, offset]);
+
+  const panelStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined} style={styles.root}>
-        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
-        <View style={[styles.panel, { paddingBottom: insets.bottom + Spacing.lg }]}>
+        {visible ? <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" /> : null}
+        <Animated.View style={[styles.panel, { paddingBottom: insets.bottom + Spacing.lg }, panelStyle]}>
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <Pressable hitSlop={12} onPress={onClose} accessibilityLabel="Close">
@@ -23,7 +46,7 @@ export function Sheet({ visible, title, onClose, children }: { visible: boolean;
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
             {children}
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
